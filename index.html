@@ -6,6 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="일지">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>일지</title>
 <style>
 :root{--bg:#f6f7f9;--card:#ffffff;--tx:#23272f;--mut:#7b8494;--ac:#3d4a5c;--acl:#e6eaf0;--bd:#dde1e8;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
@@ -335,20 +336,23 @@ $("pp").onclick=function(){if(per==="y")ty--;else tm=new Date(tm.getFullYear(),t
 $("pn").onclick=function(){if(per==="y")ty++;else tm=new Date(tm.getFullYear(),tm.getMonth()+1,1);totals()};
 function refresh(){if(!$("v2").classList.contains("hide"))totals();else render()}
 $("ex").onclick=function(){
-  var json=JSON.stringify({v:3,config:cfg||undefined,data:data,sales:sales});
+  var nw=new Date(),p2=function(x){return String(x).padStart(2,"0")};
+  var stamp=nw.getFullYear()+p2(nw.getMonth()+1)+p2(nw.getDate())+"_"+p2(nw.getHours())+p2(nw.getMinutes());
+  var shown=nw.getFullYear()+"-"+p2(nw.getMonth()+1)+"-"+p2(nw.getDate())+" "+p2(nw.getHours())+":"+p2(nw.getMinutes());
+  var json=JSON.stringify({v:3,savedAt:shown,config:cfg||undefined,data:data,sales:sales});
   var name=(((cfg&&cfg.title)||"일지").replace(/[\\\/:*?"<>|\s]/g,"")||"일지")+"_백업.json";
   function fallback(){
     var b=new Blob([json],{type:"application/json"}),a=document.createElement("a");
     a.href=URL.createObjectURL(b);a.download=name;
     document.body.appendChild(a);a.click();a.remove();
     setTimeout(function(){URL.revokeObjectURL(a.href)},3000);
-    $("msg").textContent="기록 파일을 만들었어요. 저장 위치를 확인해 주세요.";
+    $("msg").textContent=shown+" 기준 파일을 만들었어요. 같은 이름이 있으면 \u2018대체\u2019를 눌러 주세요.";
   }
   var file=null;
   try{file=new File([json],name,{type:"application/json"})}catch(e){}
   if(file&&navigator.canShare&&navigator.canShare({files:[file]})){
     navigator.share({files:[file],title:name}).then(function(){
-      $("msg").textContent="‘파일에 저장’을 눌러 지난번과 같은 폴더를 고르고, 같은 이름이 있다는 안내가 나오면 ‘대체’를 눌러 주세요.";
+      $("msg").textContent="\u2018파일에 저장\u2019을 눌러 같은 폴더를 고르고, 같은 이름이 있으면 \u2018대체\u2019를 눌러 주세요. ("+shown+" 기준)";
     }).catch(function(e){if(!e||e.name!=="AbortError")fallback()});
   }else fallback();
 };
@@ -374,7 +378,7 @@ $("fi").onchange=function(){
         if(sl){sales=sl;saveS()}
       }
       refresh();
-      $("msg").textContent=hasCfg?(hasRec?"설정과 기록을 불러왔어요.":"설정을 불러왔어요. 기존 기록은 그대로예요."):"기록을 불러왔어요.";
+      $("msg").textContent=(hasCfg?(hasRec?"설정과 기록을 불러왔어요.":"설정을 불러왔어요. 기존 기록은 그대로예요."):"기록을 불러왔어요.")+(o.savedAt?" (저장 시각 "+o.savedAt+")":"");
     }catch(e){$("msg").textContent=(e==="nocfg")?"항목 설정이 없는 파일이에요. 설정이 들어 있는 파일을 먼저 불러와 주세요.":"올바른 파일이 아니에요."}
   };
   r.readAsText(f);this.value="";
@@ -412,6 +416,7 @@ function openMoa(){
 }
 $("shot").onclick=openMoa;
 $("moc").onclick=function(){$("mo").classList.remove("on")};
+
 applyTheme(cfg);applyUi();
 render();
 if(!canStore)$("msg").textContent="이 화면에서는 기록이 저장되지 않을 수 있어요. 인터넷 주소로 열어서 사용해 주세요.";
