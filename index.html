@@ -233,6 +233,10 @@ header .bk button{flex:none;padding:6px 11px;min-height:34px;font-size:12px;bord
 .nscrim.kb .fmt button{height:30px}
 .nscrim.kb .npta{min-height:80px}
 .nb .fmt.fix{position:fixed;left:0;right:0;z-index:45;padding:6px 12px;margin:0;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+html.nlock,html.nlock body{overflow:hidden;overscroll-behavior:none}
+#np{transition:none!important}
+.nscrim.ed{align-items:flex-start}
+.nscrim.kb .npc{height:100%}
 </style>
 </head>
 <body>
@@ -912,11 +916,11 @@ function renderPop(){
   if(pEdit)h+="<div class=npta contenteditable=true></div>";
   else h+="<div class='nt"+(v?"":" z")+"' id=npview>"+(v?memoHtml(v):"메모 없음")+"</div>";
   h+="</div><div class=npn><button id=npprev"+(nPop.i<=0?" disabled":"")+">‹ 이전</button><span>"+(nPop.i+1)+" / "+c.n+"</span><button id=npnext"+(nPop.i>=c.n-1?" disabled":"")+">다음 ›</button></div></div>";
-  $("np").innerHTML=h;$("np").classList.add("on");vvFit();
+  $("np").innerHTML=h;$("np").classList.add("on");$("np").classList.toggle("ed",!!pEdit);vvFit();vvSettle(2000);
   if(pEdit){var ta=document.querySelector(".npta");if(ta){ceSet(ta,v);ceFocusEnd(ta)}}
 }
 function openPop(g,i){nPop={g:g,i:i};pEdit=false;renderPop()}
-function closePop(){nPop=null;pEdit=false;$("np").classList.remove("on");$("np").innerHTML="";vvFit();if(!$("v3").classList.contains("hide"))renderNotes()}
+function closePop(){nPop=null;pEdit=false;$("np").classList.remove("on");$("np").classList.remove("ed");$("np").innerHTML="";vvFit();if(!$("v3").classList.contains("hide"))renderNotes()}
 $("np").onclick=function(e){
   var t=e.target;
   if(t===$("np")){closePop();return}
@@ -1169,7 +1173,7 @@ function ceGet(el){
   return out.replace(/^\n+/,"").replace(/\n+$/,"");
 }
 function ceFocusEnd(el){
-  try{el.focus();var r=document.createRange();r.selectNodeContents(el);r.collapse(false);var s=window.getSelection();s.removeAllRanges();s.addRange(r)}catch(e){}
+  try{el.focus({preventScroll:true});var r=document.createRange();r.selectNodeContents(el);r.collapse(false);var s=window.getSelection();s.removeAllRanges();s.addRange(r)}catch(e){}
 }
 function ceInsert(el,tok){
   var mm=tok.match(/^\[\[(사진|영상):(\w+)\]\]$/);if(!mm)return;
@@ -1251,17 +1255,25 @@ function vvFit(){
   if(np.classList.contains("on")){
     np.style.top=vv.offsetTop+"px";np.style.bottom="auto";np.style.height=vv.height+"px";
     np.classList.toggle("kb",kb);
-  }else{np.style.top="";np.style.bottom="";np.style.height="";np.classList.remove("kb")}
+    document.documentElement.classList.add("nlock");
+  }else{document.documentElement.classList.remove("nlock");np.style.top="";np.style.bottom="";np.style.height="";np.classList.remove("kb")}
   var f=document.querySelector(".nb .fmt"),w=f&&f.parentNode,ae=document.activeElement,ed=ae&&ae.closest&&ae.closest(".nta");
   if(f&&w&&w.classList.contains("fmtw")){
     if(ed&&kb){w.style.minHeight=w.offsetHeight+"px";f.classList.add("fix");f.style.top=vv.offsetTop+"px"}
     else{f.classList.remove("fix");f.style.top="";w.style.minHeight=""}
   }
 }
-if(window.visualViewport){window.visualViewport.addEventListener("resize",vvFit);window.visualViewport.addEventListener("scroll",vvFit)}
-window.addEventListener("orientationchange",vvFit);
-document.addEventListener("focusin",function(){setTimeout(vvFit,50);setTimeout(vvFit,350)});
-document.addEventListener("focusout",function(){setTimeout(vvFit,50);setTimeout(vvFit,350)});
+var vvTok=0,vvTm=0;
+function vvSettle(ms){
+  var tok=++vvTok,t0=Date.now();
+  (function loop(){if(tok!==vvTok)return;vvFit();if(Date.now()-t0<(ms||1200))requestAnimationFrame(loop)})();
+}
+function vvLater(){vvFit();clearTimeout(vvTm);vvTm=setTimeout(function(){vvFit()},160)}
+if(window.visualViewport){window.visualViewport.addEventListener("resize",vvLater);window.visualViewport.addEventListener("scroll",vvLater)}
+window.addEventListener("orientationchange",function(){vvSettle(1200)});
+window.addEventListener("scroll",vvLater);window.addEventListener("resize",vvLater);
+document.addEventListener("focusin",function(){vvSettle(2000)});
+document.addEventListener("focusout",function(){vvSettle(800)});
 function askPhoto(sel,key){
   var ed=document.querySelector(sel),s=window.getSelection();
   pickSel=sel;pickKey=key;pickRange=null;
