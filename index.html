@@ -216,9 +216,13 @@ header .bk button{flex:none;padding:6px 11px;min-height:34px;font-size:12px;bord
 .fmt button{min-width:34px;height:34px;border:1.5px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx);font-size:15px;font-weight:700;padding:0 8px;font-family:inherit}
 .fmt button[data-f=x]{font-size:12px}
 .fmt .sep{width:1px;height:22px;background:var(--bd);margin:0 2px}
+.npc>.fmt{padding:8px 10px 6px;margin:0;border-bottom:1px solid var(--bd);background:var(--bg);flex:none}
+.nb .fmt{position:sticky;top:0;z-index:5;background:var(--card);padding:6px 0;margin:0 0 6px}
+.fmt button[data-photo],.fmt #npphoto{font-size:12px;border-color:var(--ac);color:var(--ac)}
 .cemed{position:relative;-webkit-user-select:none;user-select:none}
 .cemed .cedel{position:absolute;right:8px;top:12px;width:28px;height:28px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:13px;padding:0;z-index:2}
 .cemed.nvid{cursor:default}
+.pb,.fb,.npb,.panel,.sheet,.full,.nscrim{overscroll-behavior:contain}
 </style>
 </head>
 <body>
@@ -855,8 +859,8 @@ function noteBody(k){
 }
 function noteBlock(k){
   var h="",v=noteBody(k),ed=(nEdit===k);
-  h+="<div class=nbt>"+(ed?"<button data-photo=1>사진 넣기</button>":"")+"<button data-edit=\""+esc(k)+"\">"+(ed?"완료":"편집")+"</button></div>";
-  if(ed)h+=fmtBar()+"<div class=nta contenteditable=true data-k=\""+esc(k)+"\"></div>";
+  h+="<div class=nbt>"+"<button data-edit=\""+esc(k)+"\">"+(ed?"완료":"편집")+"</button></div>";
+  if(ed)h+=fmtBar("<button type=button data-photo=1>사진 넣기</button>")+"<div class=nta contenteditable=true data-k=\""+esc(k)+"\"></div>";
   else h+="<div class='nt"+(v?"":" z")+"'>"+(v?memoHtml(v):"메모 없음")+"</div>";
   return h;
 }
@@ -894,8 +898,8 @@ function popCur(){
 function renderPop(){
   var c=popCur();if(!c){closePop();return}
   var k="c:"+c.name,pr=+((cfg.notes&&cfg.notes.prices||{})[c.name])||0,v=noteBody(k);
-  var h="<div class=npc><div class=nph><div><div class=npg>"+esc(c.g[0])+"</div><div class=npt>"+esc(c.name)+"</div>"+"<div class=npp>"+(pr?"<small>회원가</small>"+fmt(pr)+"원":"")+"<button id=npedit>"+(pEdit?"완료":"편집")+"</button></div></div><button id=npx aria-label=\"닫기\">✕</button></div><div class=npb>";
-  if(pEdit)h+=fmtBar()+"<div class=npta contenteditable=true></div><div class=nbt><button id=npphoto>사진 넣기</button></div>";
+  var h="<div class=npc><div class=nph><div><div class=npg>"+esc(c.g[0])+"</div><div class=npt>"+esc(c.name)+"</div>"+"<div class=npp>"+(pr?"<small>회원가</small>"+fmt(pr)+"원":"")+"<button id=npedit>"+(pEdit?"완료":"편집")+"</button></div></div><button id=npx aria-label=\"닫기\">✕</button></div>"+(pEdit?fmtBar("<button type=button id=npphoto>사진 넣기</button>"):"")+"<div class=npb>";
+  if(pEdit)h+="<div class=npta contenteditable=true></div>";
   else h+="<div class='nt"+(v?"":" z")+"' id=npview>"+(v?memoHtml(v):"메모 없음")+"</div>";
   h+="</div><div class=npn><button id=npprev"+(nPop.i<=0?" disabled":"")+">‹ 이전</button><span>"+(nPop.i+1)+" / "+c.n+"</span><button id=npnext"+(nPop.i>=c.n-1?" disabled":"")+">다음 ›</button></div></div>";
   $("np").innerHTML=h;$("np").classList.add("on");
@@ -1180,12 +1184,12 @@ function saveFrom(ed){
   else if(nEdit!==null){notes[nEdit]=ceGet(ed);saveN()}
 }
 function ceDel(btn){var n=btn.closest(".cemed"),ed=n&&n.closest(".nta,.npta");if(!n)return;n.parentNode.removeChild(n);saveFrom(ed)}
-function fmtBar(){
+function fmtBar(photo){
   var h="<div class=fmt><div class=fr><button type=button data-f=b aria-label=\"굵게\"><b>B</b></button><span class=sep></span>";
   Object.keys(CPAL).forEach(function(k){h+="<button type=button data-f=c data-v=\""+CPAL[k]+"\" style=\"color:"+CPAL[k]+"\" aria-label=\"글자색 "+k+"\">가</button>"});
   h+="</div><div class=fr>";
   Object.keys(HPAL).forEach(function(k){h+="<button type=button data-f=h data-v=\""+HPAL[k]+"\" style=\"background:"+HPAL[k]+";color:#3a2a30\" aria-label=\"형광펜 "+k+"\">가</button>"});
-  return h+"<span class=sep></span><button type=button data-f=x aria-label=\"서식 해제\">해제</button></div></div>";
+  return h+"<span class=sep></span><button type=button data-f=x aria-label=\"서식 해제\">해제</button>"+photo+"</div></div>";
 }
 function fmtApply(b){
   var s=window.getSelection();if(!s||!s.rangeCount||!s.anchorNode)return;
@@ -1213,6 +1217,24 @@ document.addEventListener("paste",function(e){
   var tx=(e.clipboardData||window.clipboardData).getData("text/plain");
   try{document.execCommand("insertText",false,tx)}catch(x){}
 },true);
+(function(){
+  var sy=0;
+  function ov(){return document.querySelector(".sheet.on,.full.on,.nscrim.on")}
+  document.addEventListener("touchstart",function(e){if(e.touches.length)sy=e.touches[0].clientY},{passive:true,capture:true});
+  document.addEventListener("touchmove",function(e){
+    var o=ov();if(!o||e.touches.length!==1)return;
+    var t=e.target,el=t&&t.nodeType===1?t:(t&&t.parentNode);
+    if(el&&el.closest&&el.closest("#iv"))return;
+    var sc=null;
+    while(el&&el!==document.body&&el.nodeType===1){
+      if(o.contains(el)&&el.scrollHeight>el.clientHeight+1){var oy=getComputedStyle(el).overflowY;if(oy==="auto"||oy==="scroll"){sc=el;break}}
+      el=el.parentNode;
+    }
+    var y=e.touches[0].clientY,dy=y-sy;sy=y;
+    if(!sc){e.preventDefault();return}
+    if((dy>0&&sc.scrollTop<=0)||(dy<0&&sc.scrollTop+sc.clientHeight>=sc.scrollHeight-1))e.preventDefault();
+  },{passive:false,capture:true});
+})();
 function askPhoto(sel,key){
   var ed=document.querySelector(sel),s=window.getSelection();
   pickSel=sel;pickKey=key;pickRange=null;
