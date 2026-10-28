@@ -115,6 +115,17 @@ header .bk button{flex:none;padding:6px 11px;min-height:34px;font-size:12px;bord
 .mrow b{flex:none;color:var(--mut);font-weight:400}
 .mrow.hi{background:var(--acl);border-radius:6px}
 .mrow.on b{color:var(--ac);font-weight:700}
+.shotrow{gap:8px}
+#cpb{padding:7px 14px;border:1.5px solid var(--ac);background:var(--ac);color:#fff;border-radius:999px;font-weight:600;font-size:13px}
+.ff{padding:10px 14px;border-top:1px solid var(--bd);background:var(--bg)}
+#cpgo{width:100%;padding:14px;border:0;border-radius:999px;background:var(--ac);color:#fff;font-weight:700;font-size:16px}
+#cpgo:disabled{opacity:.45}
+.cpprev{white-space:pre-wrap;word-break:break-all;background:var(--card);border:2px solid var(--bd);border-radius:14px;padding:12px;font-size:14px;line-height:1.55;min-height:48px;margin-bottom:6px}
+.cpsub{font-size:12px;color:var(--mut);margin:10px 2px 2px}
+.chk{display:flex;align-items:center;gap:10px;width:100%;padding:11px 6px;border:0;border-bottom:1px solid var(--bd);background:transparent;color:var(--tx);font-size:15px;text-align:left}
+.chk i{flex:none;width:22px;height:22px;border:2px solid var(--bd);border-radius:7px;background:var(--card);display:flex;align-items:center;justify-content:center;font-style:normal;font-size:14px;color:#fff}
+.chk.on i{background:var(--ac);border-color:var(--ac)}
+.chk.on i::after{content:"✓"}
 </style>
 </head>
 <body>
@@ -136,8 +147,13 @@ var UI=`<header><h1><span id="bowwrap"></span><span id="ttl">일지</span></h1><
   <div class="nav hide" id="pnav"><button id="pp">‹</button><b id="plabel"></b><button id="pn">›</button></div>
   <div class="sum"><div><small id="l1">총 업무 진행 횟수</small><b id="tc">0회</b></div><div id="box2" class="hide"><small>판매 금액 합계</small><b id="tp">0원</b></div></div>
   <div class="tip" id="range" style="padding-top:0"></div>
-  <div class="shotrow" id="shotrow"><button id="shot">모아보기</button></div>
+  <div class="shotrow" id="shotrow"><button id="cpb">텍스트 복사</button><button id="shot">모아보기</button></div>
   <div class="list" id="tl"></div>
+</div>
+<div class="full" id="cp">
+  <div class="fh"><b>텍스트 복사</b><button id="cpc" aria-label="닫기">✕</button></div>
+  <div class="fb" id="cpbody"></div>
+  <div class="ff"><button id="cpgo">복사하기</button></div>
 </div>
 <div class="full" id="mo">
   <div class="fh"><b>업무 진행 횟수 모아보기</b><button id="moc" aria-label="닫기">✕</button></div>
@@ -158,17 +174,19 @@ var BOW="<svg viewBox=\"0 0 34 24\" aria-hidden=\"true\"><path d=\"M17 12 4 3C2 
 function esc(t){return String(t).replace(/[&<>"']/g,function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]})}
 function buildItems(c){
   S.length=0;P.length=0;
-  ((c&&c.workItems)||[]).forEach(function(g){(g[1]||[]).forEach(function(n){S.push({n:esc(n),c:esc(g[0])})})});
+  ((c&&c.workItems)||[]).forEach(function(g){(g[1]||[]).forEach(function(n){S.push({n:esc(n),r:String(n),c:esc(g[0])})})});
   ((c&&c.products)||[]).forEach(function(g){(g[1]||[]).forEach(function(p){P.push({n:esc(p[0]),u:esc(p[1]||""),p:+p[2]||0,c:esc(g[0])})})});
 }
-var KEY="svc-tracker-v1",KEYS="svc-sales-v1",data={},sales={},canStore=true;
+var KEY="svc-tracker-v1",KEYS="svc-sales-v1",KEYL="svc-learn-v1",data={},sales={},learn={},canStore=true;
 try{localStorage.setItem("t","1");localStorage.removeItem("t")}catch(e){canStore=false}
 try{var r=localStorage.getItem(KEY);if(r)data=JSON.parse(r)||{}}catch(e){}
 try{var r2=localStorage.getItem(KEYS);if(r2)sales=JSON.parse(r2)||{}}catch(e){}
+try{var r3=localStorage.getItem(KEYL);if(r3)learn=JSON.parse(r3)||{}}catch(e){}
 try{var rc=localStorage.getItem(KEYC);if(rc)cfg=JSON.parse(rc)}catch(e){}
 if(!cfg&&typeof DEFAULT_CONFIG!=="undefined")cfg=DEFAULT_CONFIG;
 buildItems(cfg);
 function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}}
+function saveL(){try{localStorage.setItem(KEYL,JSON.stringify(learn))}catch(e){}}
 function saveS(){try{localStorage.setItem(KEYS,JSON.stringify(sales))}catch(e){}}
 var DUMMY=document.createElement("div");
 var $=function(i){return document.getElementById(i)||DUMMY};
@@ -339,7 +357,7 @@ $("ex").onclick=function(){
   var nw=new Date(),p2=function(x){return String(x).padStart(2,"0")};
   var stamp=nw.getFullYear()+p2(nw.getMonth()+1)+p2(nw.getDate())+"_"+p2(nw.getHours())+p2(nw.getMinutes());
   var shown=nw.getFullYear()+"-"+p2(nw.getMonth()+1)+"-"+p2(nw.getDate())+" "+p2(nw.getHours())+":"+p2(nw.getMinutes());
-  var json=JSON.stringify({v:3,savedAt:shown,config:cfg||undefined,data:data,sales:sales});
+  var json=JSON.stringify({v:3,savedAt:shown,config:cfg||undefined,data:data,sales:sales,learn:Object.keys(learn)});
   var name=(((cfg&&cfg.title)||"일지").replace(/[\\\/:*?"<>|\s]/g,"")||"일지")+"_백업.json";
   function fallback(){
     var b=new Blob([json],{type:"application/json"}),a=document.createElement("a");
@@ -377,6 +395,7 @@ $("fi").onchange=function(){
         if(d){data=d;save()}
         if(sl){sales=sl;saveS()}
       }
+      if(Array.isArray(o.learn)&&(!hasCfg||hasRec)){learn={};o.learn.forEach(function(k){learn[k]=1});saveL()}
       refresh();
       $("msg").textContent=(hasCfg?(hasRec?"설정과 기록을 불러왔어요.":"설정을 불러왔어요. 기존 기록은 그대로예요."):"기록을 불러왔어요.")+(o.savedAt?" (저장 시각 "+o.savedAt+")":"");
     }catch(e){$("msg").textContent=(e==="nocfg")?"항목 설정이 없는 파일이에요. 설정이 들어 있는 파일을 먼저 불러와 주세요.":"올바른 파일이 아니에요."}
@@ -414,6 +433,68 @@ function openMoa(){
   $("mb").innerHTML=h;$("mb").scrollTop=0;
   $("mo").classList.add("on");
 }
+
+function cpText(){
+  var c=workCounts(),g1=[],g2=[];
+  S.forEach(function(s,i){
+    if(c.cnt[i]>0)g1.push(s.r+" "+c.cnt[i]);
+    else if(learn[i])g2.push(s.r);
+  });
+  var out=[];
+  if(g1.length)out.push("[가능관리]\n"+g1.join("\n"));
+  if(g2.length)out.push("[배운관리]\n"+g2.join("\n"));
+  return out.join("\n\n");
+}
+function openCopy(){
+  var c=workCounts(),h="",last="";
+  // 이미 카운트된 업무는 선택 목록과 선택 상태에서 제외
+  Object.keys(learn).forEach(function(k){if(c.cnt[k]>0)delete learn[k]});saveL();
+  h+="<div class=cpsub>미리보기</div><div class=cpprev id=cpprev></div>";
+  h+="<div class=cpsub>배운관리로 넣을 업무를 선택해 주세요. 한 번이라도 기록한 업무는 가능관리로 들어가서 여기에 나오지 않아요.</div>";
+  var n=0;
+  S.forEach(function(s,i){
+    if(c.cnt[i]>0)return;
+    if(s.c!==last){h+="<div class=cat>"+s.c+"</div>";last=s.c}
+    h+="<button class='chk"+(learn[i]?" on":"")+"' data-i="+i+"><i></i><span>"+s.n+"</span></button>";n++;
+  });
+  if(!n)h+="<div class=tip>모든 업무가 가능관리에 들어가 있어요.</div>";
+  $("cpbody").innerHTML=h;$("cpbody").scrollTop=0;
+  paintCopy();
+  $("cp").classList.add("on");
+}
+function paintCopy(){
+  var t=cpText();
+  $("cpprev").textContent=t||"복사할 내용이 없어요. 업무를 기록하거나 배운관리를 선택해 주세요.";
+  $("cpgo").disabled=!t;
+}
+$("cpbody").onclick=function(e){
+  var b=e.target.closest(".chk");if(!b)return;
+  var i=b.dataset.i;
+  if(learn[i]){delete learn[i];b.classList.remove("on")}else{learn[i]=1;b.classList.add("on")}
+  saveL();paintCopy();
+};
+function copyText(t,done){
+  function fb(){
+    var ta=document.createElement("textarea");ta.value=t;ta.setAttribute("readonly","");
+    ta.style.cssText="position:fixed;left:0;top:0;opacity:0;font-size:16px";
+    document.body.appendChild(ta);ta.focus();ta.select();ta.setSelectionRange(0,t.length);
+    var ok=false;try{ok=document.execCommand("copy")}catch(e){}
+    ta.remove();done(ok);
+  }
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(function(){done(true)},fb);
+  }else fb();
+}
+$("cpgo").onclick=function(){
+  var t=cpText();if(!t)return;
+  copyText(t,function(ok){
+    var b=$("cpgo");
+    b.textContent=ok?"복사했어요 ✓":"복사하지 못했어요. 미리보기를 길게 눌러 복사해 주세요";
+    setTimeout(function(){b.textContent="복사하기"},2200);
+  });
+};
+$("cpb").onclick=openCopy;
+$("cpc").onclick=function(){$("cp").classList.remove("on")};
 $("shot").onclick=openMoa;
 $("moc").onclick=function(){$("mo").classList.remove("on")};
 
